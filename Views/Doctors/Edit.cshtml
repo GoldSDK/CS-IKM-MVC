@@ -1,0 +1,15 @@
+@model Polyclinic.Models.Doctor
+
+<h2>редактировать врача</h2>
+<form method="post">
+    <input type="hidden" asp-for="Id" />
+    <div>
+        <label>ФИО</label>
+        <input asp-for="FullName" />
+    </div>
+    <div>
+        <label>специальность</label>
+        <input asp-for="Specialty" />
+    </div>
+    <button type="submit">сохранить</button>
+</form>

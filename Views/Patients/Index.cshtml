@@ -1,0 +1,24 @@
+@model IEnumerable<Polyclinic.Models.Patient>
+
+<h2>пациенты</h2>
+<p><a href="/Patients/Create">создать нового</a></p>
+<table>
+    <thead>
+        <tr><th>ID</th><th>ФИО</th><th>дата рождения</th><th>телефон</th><th>действия</th></tr>
+    </thead>
+    <tbody>
+    @foreach (var p in Model)
+    {
+        <tr>
+            <td>@p.Id</td>
+            <td>@p.FullName</td>
+            <td>@(p.BirthDate?.ToString("yyyy-MM-dd") ?? "-")</td>
+            <td>@p.Phone</td>
+            <td>
+                <a href="/Patients/Edit/@p.Id">редакт.</a> |
+                <a href="/Patients/Delete/@p.Id">удал.</a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

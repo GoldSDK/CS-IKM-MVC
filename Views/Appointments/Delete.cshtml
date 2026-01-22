@@ -1,0 +1,8 @@
+@model Polyclinic.Models.Appointment
+
+<h2>удалить прием</h2>
+<p>удалить прием? <strong>@Model.DateTime.ToString("yyyy-MM-dd HH:mm")</strong> пациент: <strong>@Model.Patient?.FullName</strong> врач: <strong>@Model.Doctor?.FullName</strong></p>
+<form method="post">
+    <button type="submit">да</button>
+    <a href="/Appointments">я передумал</a>
+</form>

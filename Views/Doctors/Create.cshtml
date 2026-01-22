@@ -1,0 +1,14 @@
+@model Polyclinic.Models.Doctor
+
+<h2>создать врача</h2>
+<form method="post">
+    <div>
+        <label>ФИО</label>
+        <input asp-for="FullName" />
+    </div>
+    <div>
+        <label>специальность</label>
+        <input asp-for="Specialty" />
+    </div>
+    <button type="submit">сохранить</button>
+</form>

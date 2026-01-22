@@ -1,0 +1,23 @@
+@model IEnumerable<Polyclinic.Models.Doctor>
+
+<h2>врачи</h2>
+<p><a href="/Doctors/Create">cоздать врача</a></p>
+<table>
+    <thead>
+        <tr><th>ID</th><th>ФИО</th><th>специальность</th><th>действия</th></tr>
+    </thead>
+    <tbody>
+    @foreach (var d in Model)
+    {
+        <tr>
+            <td>@d.Id</td>
+            <td>@d.FullName</td>
+            <td>@d.Specialty</td>
+            <td>
+                <a href="/Doctors/Edit/@d.Id">редакт.</a> |
+                <a href="/Doctors/Delete/@d.Id">удал.</a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

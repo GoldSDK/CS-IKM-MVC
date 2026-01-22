@@ -1,0 +1,32 @@
+@model Polyclinic.Models.Appointment
+
+<h2>создать прием</h2>
+<form method="post">
+    <div>
+        <label>дата и время</label>
+        <input asp-for="DateTime" type="datetime-local" />
+    </div>
+    <div>
+        <label>пациент</label>
+        <select asp-for="PatientId">
+            @foreach (var p in (IEnumerable<Polyclinic.Models.Patient>)ViewBag.Patients)
+            {
+                <option value="@p.Id">@p.FullName</option>
+            }
+        </select>
+    </div>
+    <div>
+        <label>врач</label>
+        <select asp-for="DoctorId">
+            @foreach (var d in (IEnumerable<Polyclinic.Models.Doctor>)ViewBag.Doctors)
+            {
+                <option value="@d.Id">@d.FullName (@d.Specialty)</option>
+            }
+        </select>
+    </div>
+    <div>
+        <label>заметки</label>
+        <textarea asp-for="Notes"></textarea>
+    </div>
+    <button type="submit">сохранить</button>
+</form>

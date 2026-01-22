@@ -1,0 +1,1052 @@
+# Проект: Поликлиника (ASP.NET Core MVC, C#)
+
+Ниже — полный набор файлов простого учебного MVC CRUD-приложения на C# с базой данных PostgreSQL (локально). Проект максимально упрощён и снабжён XML-документацией. Скопируйте файлы в структуру проекта и запустите по инструкции в README.
+
+---
+
+## Структура проекта
+
+```
+Polyclinic/
+├─ Polyclinic.csproj
+├─ Program.cs
+├─ appsettings.json
+├─ README.md
+├─ sql/
+│  └─ create_db.sql
+├─ Data/
+│  └─ PolyclinicContext.cs
+├─ Models/
+│  ├─ Patient.cs
+│  ├─ Doctor.cs
+│  └─ Appointment.cs
+├─ Controllers/
+│  ├─ PatientsController.cs
+│  ├─ DoctorsController.cs
+│  └─ AppointmentsController.cs
+└─ Views/
+   ├─ _ViewImports.cshtml
+   ├─ _ViewStart.cshtml
+   ├─ Shared/
+   │  └─ _Layout.cshtml
+   ├─ Patients/
+   │  ├─ Index.cshtml
+   │  ├─ Create.cshtml
+   │  ├─ Edit.cshtml
+   │  └─ Delete.cshtml
+   ├─ Doctors/
+   │  ├─ Index.cshtml
+   │  ├─ Create.cshtml
+   │  ├─ Edit.cshtml
+   │  └─ Delete.cshtml
+   └─ Appointments/
+      ├─ Index.cshtml
+      ├─ Create.cshtml
+      ├─ Edit.cshtml
+      └─ Delete.cshtml
+```
+
+---
+
+## 1) Polyclinic.csproj
+
+```xml
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Генерация XML документации -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.0">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+</Project>
+```
+
+---
+
+## 2) appsettings.json
+
+```json
+{
+  "ConnectionStrings": {
+    "PolyclinicConnection": "Host=localhost;Port=5432;Database=polyclinic_db;Username=postgres;Password=YourPasswordHere"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft": "Warning",
+      "Microsoft.Hosting.Lifetime": "Information"
+    }
+  },
+  "AllowedHosts": "*"
+}
+```
+
+> Замените `Username`/`Password` на свои. Процесс настройки — в README.
+
+---
+
+## 3) Program.cs
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+using Polyclinic.Data;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+builder.Services.AddControllersWithViews();
+
+// Add DbContext using PostgreSQL provider.
+builder.Services.AddDbContext<PolyclinicContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("PolyclinicConnection")));
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline.
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Home/Error");
+}
+
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Patients}/{action=Index}/{id?}");
+
+app.Run();
+```
+
+---
+
+## 4) Data/PolyclinicContext.cs
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+using Polyclinic.Models;
+
+namespace Polyclinic.Data
+{
+    /// <summary>
+    /// DbContext для приложения Поликлиника.
+    /// Содержит наборы сущностей: Patients, Doctors, Appointments.
+    /// </summary>
+    public class PolyclinicContext : DbContext
+    {
+        public PolyclinicContext(DbContextOptions<PolyclinicContext> options)
+            : base(options)
+        {
+        }
+
+        public DbSet<Patient> Patients { get; set; } = null!;
+
+        public DbSet<Doctor> Doctors { get; set; } = null!;
+
+        public DbSet<Appointment> Appointments { get; set; } = null!;
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            // Простая конфигурация ключей и связей
+            modelBuilder.Entity<Patient>().HasKey(p => p.Id);
+            modelBuilder.Entity<Doctor>().HasKey(d => d.Id);
+            modelBuilder.Entity<Appointment>().HasKey(a => a.Id);
+
+            modelBuilder.Entity<Appointment>()
+                .HasOne(a => a.Patient)
+                .WithMany(p => p.Appointments)
+                .HasForeignKey(a => a.PatientId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Appointment>()
+                .HasOne(a => a.Doctor)
+                .WithMany(d => d.Appointments)
+                .HasForeignKey(a => a.DoctorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            base.OnModelCreating(modelBuilder);
+        }
+    }
+}
+```
+
+---
+
+## 5) Models
+
+### Models/Patient.cs
+
+```csharp
+using System.ComponentModel.DataAnnotations;
+
+namespace Polyclinic.Models
+{
+    /// <summary>
+    /// Пациент.
+    /// </summary>
+    public class Patient
+    {
+        /// <summary>
+        /// Идентификатор пациента.
+        /// </summary>
+        public int Id { get; set; }
+
+        /// <summary>
+        /// ФИО пациента.
+        /// </summary>
+        [Required]
+        [StringLength(100)]
+        public string FullName { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Дата рождения.
+        /// </summary>
+        [Display(Name = "Дата рождения")]
+        [DataType(DataType.Date)]
+        public DateTime? BirthDate { get; set; }
+
+        /// <summary>
+        /// Телефон.
+        /// </summary>
+        [Phone]
+        public string? Phone { get; set; }
+
+        /// <summary>
+        /// Навигационное свойство — приёмы.
+        /// </summary>
+        public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
+    }
+}
+```
+
+### Models/Doctor.cs
+
+```csharp
+using System.ComponentModel.DataAnnotations;
+
+namespace Polyclinic.Models
+{
+    /// <summary>
+    /// Врач.
+    /// </summary>
+    public class Doctor
+    {
+        /// <summary>
+        /// Идентификатор врача.
+        /// </summary>
+        public int Id { get; set; }
+
+        /// <summary>
+        /// Полное имя врача.
+        /// </summary>
+        [Required]
+        [StringLength(100)]
+        public string FullName { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Специальность.
+        /// </summary>
+        [StringLength(100)]
+        public string? Specialty { get; set; }
+
+        /// <summary>
+        /// Навигационное свойство — приёмы.
+        /// </summary>
+        public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
+    }
+}
+```
+
+### Models/Appointment.cs
+
+```csharp
+using System.ComponentModel.DataAnnotations;
+
+namespace Polyclinic.Models
+{
+    /// <summary>
+    /// Приём (appointment) — связывает пациента и врача.
+    /// </summary>
+    public class Appointment
+    {
+        /// <summary>
+        /// Идентификатор приёма.
+        /// </summary>
+        public int Id { get; set; }
+
+        /// <summary>
+        /// Дата и время приёма.
+        /// </summary>
+        [Display(Name = "Дата и время")]
+        [DataType(DataType.DateTime)]
+        public DateTime DateTime { get; set; }
+
+        /// <summary>
+        /// Идентификатор пациента.
+        /// </summary>
+        [Required]
+        public int PatientId { get; set; }
+
+        /// <summary>
+        /// Навигационное свойство — пациент.
+        /// </summary>
+        public Patient? Patient { get; set; }
+
+        /// <summary>
+        /// Идентификатор врача.
+        /// </summary>
+        [Required]
+        public int DoctorId { get; set; }
+
+        /// <summary>
+        /// Навигационное свойство — врач.
+        /// </summary>
+        public Doctor? Doctor { get; set; }
+
+        /// <summary>
+        /// Краткое примечание.
+        /// </summary>
+        [StringLength(500)]
+        public string? Notes { get; set; }
+    }
+}
+```
+
+---
+
+## 6) Controllers
+
+> Все контроллеры поддерживают базовые CRUD-операции: Index (список), Create (GET/POST), Edit (GET/POST), Delete (GET/POST).
+
+### Controllers/PatientsController.cs
+
+```csharp
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Polyclinic.Data;
+using Polyclinic.Models;
+
+namespace Polyclinic.Controllers
+{
+    /// <summary>
+    /// Контроллер для работы с пациентами.
+    /// </summary>
+    public class PatientsController : Controller
+    {
+        private readonly PolyclinicContext _context;
+
+        public PatientsController(PolyclinicContext context)
+        {
+            _context = context;
+        }
+
+        /// <summary>
+        /// Показать список пациентов.
+        /// </summary>
+        public async Task<IActionResult> Index()
+        {
+            var patients = await _context.Patients.ToListAsync();
+            return View(patients);
+        }
+
+        /// <summary>
+        /// Форма создания.
+        /// </summary>
+        public IActionResult Create() => View();
+
+        /// <summary>
+        /// Создать пациента.
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(Patient patient)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View(patient);
+            }
+
+            _context.Patients.Add(patient);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
+        }
+
+        /// <summary>
+        /// Форма редактирования.
+        /// </summary>
+        public async Task<IActionResult> Edit(int id)
+        {
+            var patient = await _context.Patients.FindAsync(id);
+            if (patient == null) return NotFound();
+            return View(patient);
+        }
+
+        /// <summary>
+        /// Сохранить редактирование.
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(int id, Patient patient)
+        {
+            if (id != patient.Id) return BadRequest();
+            if (!ModelState.IsValid) return View(patient);
+
+            _context.Update(patient);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
+        }
+
+        /// <summary>
+        /// Подтверждение удаления.
+        /// </summary>
+        public async Task<IActionResult> Delete(int id)
+        {
+            var patient = await _context.Patients.FindAsync(id);
+            if (patient == null) return NotFound();
+            return View(patient);
+        }
+
+        /// <summary>
+        /// Удалить пациента.
+        /// </summary>
+        [HttpPost, ActionName("Delete")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteConfirmed(int id)
+        {
+            var patient = await _context.Patients.FindAsync(id);
+            if (patient == null) return NotFound();
+
+            _context.Patients.Remove(patient);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
+        }
+    }
+}
+```
+
+### Controllers/DoctorsController.cs
+
+```csharp
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Polyclinic.Data;
+using Polyclinic.Models;
+
+namespace Polyclinic.Controllers
+{
+    /// <summary>
+    /// Контроллер для врачей.
+    /// </summary>
+    public class DoctorsController : Controller
+    {
+        private readonly PolyclinicContext _context;
+
+        public DoctorsController(PolyclinicContext context)
+        {
+            _context = context;
+        }
+
+        public async Task<IActionResult> Index()
+        {
+            return View(await _context.Doctors.ToListAsync());
+        }
+
+        public IActionResult Create() => View();
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(Doctor doctor)
+        {
+            if (!ModelState.IsValid) return View(doctor);
+            _context.Doctors.Add(doctor);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
+        }
+
+        public async Task<IActionResult> Edit(int id)
+        {
+            var doctor = await _context.Doctors.FindAsync(id);
+            if (doctor == null) return NotFound();
+            return View(doctor);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(int id, Doctor doctor)
+        {
+            if (id != doctor.Id) return BadRequest();
+            if (!ModelState.IsValid) return View(doctor);
+            _context.Update(doctor);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
+        }
+
+        public async Task<IActionResult> Delete(int id)
+        {
+            var doctor = await _context.Doctors.FindAsync(id);
+            if (doctor == null) return NotFound();
+            return View(doctor);
+        }
+
+        [HttpPost, ActionName("Delete")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteConfirmed(int id)
+        {
+            var doctor = await _context.Doctors.FindAsync(id);
+            if (doctor == null) return NotFound();
+            _context.Doctors.Remove(doctor);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
+        }
+    }
+}
+```
+
+### Controllers/AppointmentsController.cs
+
+```csharp
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Polyclinic.Data;
+using Polyclinic.Models;
+
+namespace Polyclinic.Controllers
+{
+    /// <summary>
+    /// Контроллер для приёмов.
+    /// </summary>
+    public class AppointmentsController : Controller
+    {
+        private readonly PolyclinicContext _context;
+
+        public AppointmentsController(PolyclinicContext context)
+        {
+            _context = context;
+        }
+
+        public async Task<IActionResult> Index()
+        {
+            var appointments = await _context.Appointments
+                .Include(a => a.Patient)
+                .Include(a => a.Doctor)
+                .ToListAsync();
+
+            return View(appointments);
+        }
+
+        public async Task<IActionResult> Create()
+        {
+            ViewBag.Patients = await _context.Patients.ToListAsync();
+            ViewBag.Doctors = await _context.Doctors.ToListAsync();
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(Appointment appointment)
+        {
+            if (!ModelState.IsValid)
+            {
+                ViewBag.Patients = await _context.Patients.ToListAsync();
+                ViewBag.Doctors = await _context.Doctors.ToListAsync();
+                return View(appointment);
+            }
+
+            _context.Appointments.Add(appointment);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
+        }
+
+        public async Task<IActionResult> Edit(int id)
+        {
+            var appointment = await _context.Appointments.FindAsync(id);
+            if (appointment == null) return NotFound();
+
+            ViewBag.Patients = await _context.Patients.ToListAsync();
+            ViewBag.Doctors = await _context.Doctors.ToListAsync();
+            return View(appointment);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(int id, Appointment appointment)
+        {
+            if (id != appointment.Id) return BadRequest();
+            if (!ModelState.IsValid)
+            {
+                ViewBag.Patients = await _context.Patients.ToListAsync();
+                ViewBag.Doctors = await _context.Doctors.ToListAsync();
+                return View(appointment);
+            }
+
+            _context.Update(appointment);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
+        }
+
+        public async Task<IActionResult> Delete(int id)
+        {
+            var appointment = await _context.Appointments
+                .Include(a => a.Patient)
+                .Include(a => a.Doctor)
+                .FirstOrDefaultAsync(a => a.Id == id);
+            if (appointment == null) return NotFound();
+            return View(appointment);
+        }
+
+        [HttpPost, ActionName("Delete")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteConfirmed(int id)
+        {
+            var appointment = await _context.Appointments.FindAsync(id);
+            if (appointment == null) return NotFound();
+            _context.Appointments.Remove(appointment);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
+        }
+    }
+}
+```
+
+---
+
+## 7) Views (минимальные)
+
+> Внимание: все представления очень простые — пригодны для учебного проекта и легко читаемы.
+
+### Views/_ViewImports.cshtml
+
+```cshtml
+@using Polyclinic
+@using Polyclinic.Models
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+```
+
+### Views/_ViewStart.cshtml
+
+```cshtml
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+```
+
+### Views/Shared/_Layout.cshtml
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Поликлиника</title>
+</head>
+<body>
+    <header>
+        <h1>Поликлиника — простая CRUD</h1>
+        <nav>
+            <a href="/Patients">Пациенты</a> |
+            <a href="/Doctors">Врачи</a> |
+            <a href="/Appointments">Приёмы</a>
+        </nav>
+        <hr />
+    </header>
+    <main>
+        @RenderBody()
+    </main>
+    <footer>
+        <hr />
+        <small>Учебный проект</small>
+    </footer>
+</body>
+</html>
+```
+
+### Views/Patients/Index.cshtml
+
+```cshtml
+@model IEnumerable<Polyclinic.Models.Patient>
+
+<h2>Пациенты</h2>
+<p><a href="/Patients/Create">Создать нового пациента</a></p>
+<table>
+    <thead>
+        <tr><th>Id</th><th>ФИО</th><th>Дата рождения</th><th>Телефон</th><th>Действия</th></tr>
+    </thead>
+    <tbody>
+    @foreach (var p in Model)
+    {
+        <tr>
+            <td>@p.Id</td>
+            <td>@p.FullName</td>
+            <td>@(p.BirthDate?.ToString("yyyy-MM-dd") ?? "-")</td>
+            <td>@p.Phone</td>
+            <td>
+                <a href="/Patients/Edit/@p.Id">Ред.</a> |
+                <a href="/Patients/Delete/@p.Id">Уд.</a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
+```
+
+### Views/Patients/Create.cshtml
+
+```cshtml
+@model Polyclinic.Models.Patient
+
+<h2>Создать пациента</h2>
+<form method="post">
+    <div>
+        <label>ФИО</label>
+        <input asp-for="FullName" />
+        <span asp-validation-for="FullName"></span>
+    </div>
+    <div>
+        <label>Дата рождения</label>
+        <input asp-for="BirthDate" type="date" />
+    </div>
+    <div>
+        <label>Телефон</label>
+        <input asp-for="Phone" />
+    </div>
+    <button type="submit">Сохранить</button>
+</form>
+```
+
+### Views/Patients/Edit.cshtml
+
+```cshtml
+@model Polyclinic.Models.Patient
+
+<h2>Редактировать пациента</h2>
+<form method="post">
+    <input type="hidden" asp-for="Id" />
+    <div>
+        <label>ФИО</label>
+        <input asp-for="FullName" />
+        <span asp-validation-for="FullName"></span>
+    </div>
+    <div>
+        <label>Дата рождения</label>
+        <input asp-for="BirthDate" type="date" />
+    </div>
+    <div>
+        <label>Телефон</label>
+        <input asp-for="Phone" />
+    </div>
+    <button type="submit">Сохранить</button>
+</form>
+```
+
+### Views/Patients/Delete.cshtml
+
+```cshtml
+@model Polyclinic.Models.Patient
+
+<h2>Удалить пациента</h2>
+<p>Вы действительно хотите удалить пациента: <strong>@Model.FullName</strong>?</p>
+<form method="post">
+    <button type="submit">Да, удалить</button>
+    <a href="/Patients">Отмена</a>
+</form>
+```
+
+> Аналогично — для Doctors и Appointments. Ниже приведены основные представления для них.
+
+### Views/Doctors/Index.cshtml
+
+```cshtml
+@model IEnumerable<Polyclinic.Models.Doctor>
+
+<h2>Врачи</h2>
+<p><a href="/Doctors/Create">Создать врача</a></p>
+<table>
+    <thead>
+        <tr><th>Id</th><th>ФИО</th><th>Специальность</th><th>Действия</th></tr>
+    </thead>
+    <tbody>
+    @foreach (var d in Model)
+    {
+        <tr>
+            <td>@d.Id</td>
+            <td>@d.FullName</td>
+            <td>@d.Specialty</td>
+            <td>
+                <a href="/Doctors/Edit/@d.Id">Ред.</a> |
+                <a href="/Doctors/Delete/@d.Id">Уд.</a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
+```
+
+### Views/Doctors/Create.cshtml
+
+```cshtml
+@model Polyclinic.Models.Doctor
+
+<h2>Создать врача</h2>
+<form method="post">
+    <div>
+        <label>ФИО</label>
+        <input asp-for="FullName" />
+    </div>
+    <div>
+        <label>Специальность</label>
+        <input asp-for="Specialty" />
+    </div>
+    <button type="submit">Сохранить</button>
+</form>
+```
+
+### Views/Doctors/Edit.cshtml
+
+```cshtml
+@model Polyclinic.Models.Doctor
+
+<h2>Редактировать врача</h2>
+<form method="post">
+    <input type="hidden" asp-for="Id" />
+    <div>
+        <label>ФИО</label>
+        <input asp-for="FullName" />
+    </div>
+    <div>
+        <label>Специальность</label>
+        <input asp-for="Specialty" />
+    </div>
+    <button type="submit">Сохранить</button>
+</form>
+```
+
+### Views/Doctors/Delete.cshtml
+
+```cshtml
+@model Polyclinic.Models.Doctor
+
+<h2>Удалить врача</h2>
+<p>Вы действительно хотите удалить врача: <strong>@Model.FullName</strong>?</p>
+<form method="post">
+    <button type="submit">Да, удалить</button>
+    <a href="/Doctors">Отмена</a>
+</form>
+```
+
+### Views/Appointments/Index.cshtml
+
+```cshtml
+@model IEnumerable<Polyclinic.Models.Appointment>
+
+<h2>Приёмы</h2>
+<p><a href="/Appointments/Create">Назначить приём</a></p>
+<table>
+    <thead>
+        <tr><th>Id</th><th>Дата и время</th><th>Пациент</th><th>Врач</th><th>Заметки</th><th>Действия</th></tr>
+    </thead>
+    <tbody>
+    @foreach (var a in Model)
+    {
+        <tr>
+            <td>@a.Id</td>
+            <td>@a.DateTime.ToString("yyyy-MM-dd HH:mm")</td>
+            <td>@a.Patient?.FullName</td>
+            <td>@a.Doctor?.FullName</td>
+            <td>@a.Notes</td>
+            <td>
+                <a href="/Appointments/Edit/@a.Id">Ред.</a> |
+                <a href="/Appointments/Delete/@a.Id">Уд.</a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
+```
+
+### Views/Appointments/Create.cshtml
+
+```cshtml
+@model Polyclinic.Models.Appointment
+
+<h2>Назначить приём</h2>
+<form method="post">
+    <div>
+        <label>Дата и время</label>
+        <input asp-for="DateTime" type="datetime-local" />
+    </div>
+    <div>
+        <label>Пациент</label>
+        <select asp-for="PatientId">
+            @foreach (var p in (IEnumerable<Polyclinic.Models.Patient>)ViewBag.Patients)
+            {
+                <option value="@p.Id">@p.FullName</option>
+            }
+        </select>
+    </div>
+    <div>
+        <label>Врач</label>
+        <select asp-for="DoctorId">
+            @foreach (var d in (IEnumerable<Polyclinic.Models.Doctor>)ViewBag.Doctors)
+            {
+                <option value="@d.Id">@d.FullName (@d.Specialty)</option>
+            }
+        </select>
+    </div>
+    <div>
+        <label>Заметки</label>
+        <textarea asp-for="Notes"></textarea>
+    </div>
+    <button type="submit">Сохранить</button>
+</form>
+```
+
+### Views/Appointments/Edit.cshtml
+
+```cshtml
+@model Polyclinic.Models.Appointment
+
+<h2>Редактировать приём</h2>
+<form method="post">
+    <input type="hidden" asp-for="Id" />
+    <div>
+        <label>Дата и время</label>
+        <input asp-for="DateTime" type="datetime-local" value="@Model.DateTime.ToString("yyyy-MM-ddTHH:mm")" />
+    </div>
+    <div>
+        <label>Пациент</label>
+        <select asp-for="PatientId">
+            @foreach (var p in (IEnumerable<Polyclinic.Models.Patient>)ViewBag.Patients)
+            {
+                <option value="@p.Id" selected="@(p.Id == Model.PatientId ? "selected" : null)">@p.FullName</option>
+            }
+        </select>
+    </div>
+    <div>
+        <label>Врач</label>
+        <select asp-for="DoctorId">
+            @foreach (var d in (IEnumerable<Polyclinic.Models.Doctor>)ViewBag.Doctors)
+            {
+                <option value="@d.Id" selected="@(d.Id == Model.DoctorId ? "selected" : null)">@d.FullName (@d.Specialty)</option>
+            }
+        </select>
+    </div>
+    <div>
+        <label>Заметки</label>
+        <textarea asp-for="Notes">@Model.Notes</textarea>
+    </div>
+    <button type="submit">Сохранить</button>
+</form>
+```
+
+### Views/Appointments/Delete.cshtml
+
+```cshtml
+@model Polyclinic.Models.Appointment
+
+<h2>Удалить приём</h2>
+<p>Удалить приём <strong>@Model.DateTime.ToString("yyyy-MM-dd HH:mm")</strong> пациент: <strong>@Model.Patient?.FullName</strong> врач: <strong>@Model.Doctor?.FullName</strong> ?</p>
+<form method="post">
+    <button type="submit">Да, удалить</button>
+    <a href="/Appointments">Отмена</a>
+</form>
+```
+
+---
+
+## 8) SQL для создания БД и семплов: `sql/create_db.sql`
+
+```sql
+-- Создание базы и таблиц (выполните в psql или pgAdmin)
+-- Примечание: если база уже создана, пропустите команду CREATE DATABASE
+-- CREATE DATABASE polyclinic_db;
+
+-- Таблицы
+CREATE TABLE IF NOT EXISTS patients (
+  id serial PRIMARY KEY,
+  fullname varchar(100) NOT NULL,
+  birthdate date,
+  phone varchar(50)
+);
+
+CREATE TABLE IF NOT EXISTS doctors (
+  id serial PRIMARY KEY,
+  fullname varchar(100) NOT NULL,
+  specialty varchar(100)
+);
+
+CREATE TABLE IF NOT EXISTS appointments (
+  id serial PRIMARY KEY,
+  datetime timestamp NOT NULL,
+  patientid integer NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+  doctorid integer NOT NULL REFERENCES doctors(id) ON DELETE RESTRICT,
+  notes text
+);
+
+-- Примеры данных
+INSERT INTO patients (fullname, birthdate, phone) VALUES
+('Иванов Иван Иванович', '1990-05-12', '+37060000001'),
+('Петров Пётр Петрович', '1985-11-30', '+37060000002');
+
+INSERT INTO doctors (fullname, specialty) VALUES
+('Смирнова Ольга Сергеевна', 'Терапевт'),
+('Кузнецов Андрей Игоревич', 'Хирург');
+
+INSERT INTO appointments (datetime, patientid, doctorid, notes) VALUES
+('2026-02-01 10:00', 1, 1, 'Первичный прием'),
+('2026-02-02 14:30', 2, 2, 'Повторный осмотр');
+```
+
+---
+
+## 9) README.md (краткая инструкция)
+
+````markdown
+# Поликлиника — простой MVC CRUD
+
+Технологии: .NET 8, ASP.NET Core MVC, Entity Framework Core, PostgreSQL (Npgsql).
+
+## Установка и запуск
+
+1. Установите .NET 8 SDK: https://dotnet.microsoft.com
+2. Установите PostgreSQL локально (pgAdmin/psql).
+3. Создайте базу `polyclinic_db` или выполните `sql/create_db.sql` в своей СУБД.
+4. Обновите `appsettings.json` — заполните `Username` и `Password`.
+5. В каталоге проекта запустите:
+
+```bash
+dotnet restore
+dotnet ef database update    # если используете миграции; или просто создайте БД вручную
+dotnet run
+````
+
+6. Откройте [http://localhost:5000](http://localhost:5000) или порт, указанный в выводе.
+
+## Примечания
+
+* Проект минималистичен и предназначен для изучения MVC + CRUD.
+* В коде присутствует XML-документация (сгенерируется при сборке) для классов и методов.
+
+```
+
+---
+
+Если хотите — я могу:
+- Генерировать `dotnet ef migrations add Initial` и показать содержимое миграций (текстом);
+- Упростить ещё больше (например, убрать async/await);
+- Добавить валидацию на клиенте (простые HTML-атрибуты) или пример unit-теста.
+
+Скажите, что делать дальше — собрать проект, добавить миграцию, или провести вас по шагам запуска локально?
+
+```

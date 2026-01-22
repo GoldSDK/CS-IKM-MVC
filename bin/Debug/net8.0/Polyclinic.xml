@@ -1,0 +1,159 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Polyclinic</name>
+    </assembly>
+    <members>
+        <member name="T:Polyclinic.Controllers.AppointmentsController">
+            <summary>
+            контроллер для приемов
+            </summary>
+        </member>
+        <member name="T:Polyclinic.Controllers.DoctorsController">
+            <summary>
+            контроллер для врачей
+            </summary>
+        </member>
+        <member name="T:Polyclinic.Controllers.PatientsController">
+            <summary>
+            контроллер для работы с пациентами
+            </summary>
+        </member>
+        <member name="M:Polyclinic.Controllers.PatientsController.Index">
+            <summary>
+            показать список пациентов
+            </summary>
+        </member>
+        <member name="M:Polyclinic.Controllers.PatientsController.Create">
+            <summary>
+            форма создания
+            </summary>
+        </member>
+        <member name="M:Polyclinic.Controllers.PatientsController.Create(Polyclinic.Models.Patient)">
+            <summary>
+            создать пациента
+            </summary>
+        </member>
+        <member name="M:Polyclinic.Controllers.PatientsController.Edit(System.Int32)">
+            <summary>
+            форма редактирования
+            </summary>
+        </member>
+        <member name="M:Polyclinic.Controllers.PatientsController.Edit(System.Int32,Polyclinic.Models.Patient)">
+            <summary>
+            сохранить редактирование
+            </summary>
+        </member>
+        <member name="M:Polyclinic.Controllers.PatientsController.Delete(System.Int32)">
+            <summary>
+            подтверждение удаления
+            </summary>
+        </member>
+        <member name="M:Polyclinic.Controllers.PatientsController.DeleteConfirmed(System.Int32)">
+            <summary>
+            удалить пациента
+            </summary>
+        </member>
+        <member name="T:Polyclinic.Data.PolyclinicContext">
+            <summary>
+            DbContext для приложения поликлиника
+            наборы: Patients, Doctors, Appointments
+            </summary>
+        </member>
+        <member name="T:Polyclinic.Models.Appointment">
+            <summary>
+            appointment связывает пациента и врача
+            </summary>
+        </member>
+        <member name="P:Polyclinic.Models.Appointment.Id">
+            <summary>
+            id приема
+            </summary>
+        </member>
+        <member name="P:Polyclinic.Models.Appointment.DateTime">
+            <summary>
+            дата и время приёма
+            </summary>
+        </member>
+        <member name="P:Polyclinic.Models.Appointment.PatientId">
+            <summary>
+            id пациента
+            </summary>
+        </member>
+        <member name="P:Polyclinic.Models.Appointment.Patient">
+            <summary>
+            навигационное свойство пациента
+            </summary>
+        </member>
+        <member name="P:Polyclinic.Models.Appointment.DoctorId">
+            <summary>
+            id врача
+            </summary>
+        </member>
+        <member name="P:Polyclinic.Models.Appointment.Doctor">
+            <summary>
+            навигационное свойство врачa
+            </summary>
+        </member>
+        <member name="P:Polyclinic.Models.Appointment.Notes">
+            <summary>
+            примечание
+            </summary>
+        </member>
+        <member name="T:Polyclinic.Models.Doctor">
+            <summary>
+            врач
+            </summary>
+        </member>
+        <member name="P:Polyclinic.Models.Doctor.Id">
+            <summary>
+            id врача
+            </summary>
+        </member>
+        <member name="P:Polyclinic.Models.Doctor.FullName">
+            <summary>
+            имя врача
+            </summary>
+        </member>
+        <member name="P:Polyclinic.Models.Doctor.Specialty">
+            <summary>
+            cпециальность
+            </summary>
+        </member>
+        <member name="P:Polyclinic.Models.Doctor.Appointments">
+            <summary>
+            навигационное свойство приемов
+            </summary>
+        </member>
+        <member name="T:Polyclinic.Models.Patient">
+            <summary>
+            пациент
+            </summary>
+        </member>
+        <member name="P:Polyclinic.Models.Patient.Id">
+            <summary>
+            id пациента
+            </summary>
+        </member>
+        <member name="P:Polyclinic.Models.Patient.FullName">
+            <summary>
+            ФИО пациента
+            </summary>
+        </member>
+        <member name="P:Polyclinic.Models.Patient.BirthDate">
+            <summary>
+            дата рождения
+            </summary>
+        </member>
+        <member name="P:Polyclinic.Models.Patient.Phone">
+            <summary>
+            телефон
+            </summary>
+        </member>
+        <member name="P:Polyclinic.Models.Patient.Appointments">
+            <summary>
+            навигационное свойство приемов
+            </summary>
+        </member>
+    </members>
+</doc>

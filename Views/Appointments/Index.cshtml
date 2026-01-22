@@ -1,0 +1,25 @@
+@model IEnumerable<Polyclinic.Models.Appointment>
+
+<h2>приемы</h2>
+<p><a href="/Appointments/Create">создать прием</a></p>
+<table>
+    <thead>
+        <tr><th>ID</th><th>дата и время</th><th>пациент</th><th>врач</th><th>заметки</th><th>действия</th></tr>
+    </thead>
+    <tbody>
+    @foreach (var a in Model)
+    {
+        <tr>
+            <td>@a.Id</td>
+            <td>@a.DateTime.ToString("yyyy-MM-dd HH:mm")</td>
+            <td>@a.Patient?.FullName</td>
+            <td>@a.Doctor?.FullName</td>
+            <td>@a.Notes</td>
+            <td>
+                <a href="/Appointments/Edit/@a.Id">Ред.</a> |
+                <a href="/Appointments/Delete/@a.Id">Уд.</a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

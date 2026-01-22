@@ -1,0 +1,20 @@
+@model Polyclinic.Models.Patient
+
+<h2>редактировать пациента</h2>
+<form method="post">
+    <input type="hidden" asp-for="Id" />
+    <div>
+        <label>ФИО</label>
+        <input asp-for="FullName" />
+        <span asp-validation-for="FullName"></span>
+    </div>
+    <div>
+        <label>дата рождения</label>
+        <input asp-for="BirthDate" type="date" />
+    </div>
+    <div>
+        <label>телефон</label>
+        <input asp-for="Phone" />
+    </div>
+    <button type="submit">сохранить</button>
+</form>
